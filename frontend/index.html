@@ -1,15 +1,23 @@
 <form onsubmit="generateNotes(event)">
-  <input id="topic" />
-  <button type="submit">Generate</button>
+  <input id="topic" placeholder="Enter topic" required />
+  <button type="submit">Generate Notes</button>
 </form>
 
-<div id="output"></div>
+<hr />
+
+<pre id="output" style="white-space: pre-wrap; font-family: inherit;"></pre>
+
+<a id="downloadBtn" style="display:none;" target="_blank">
+  📄 Download PDF
+</a>
 
 <script>
 async function generateNotes(e) {
   e.preventDefault();
 
   const topic = document.getElementById("topic").value;
+  document.getElementById("output").innerText = "Generating notes...";
+  document.getElementById("downloadBtn").style.display = "none";
 
   const res = await fetch("http://127.0.0.1:8000/notes/generate", {
     method: "POST",
@@ -18,6 +26,13 @@ async function generateNotes(e) {
   });
 
   const data = await res.json();
+
   document.getElementById("output").innerText = data.notes;
+
+  const btn = document.getElementById("downloadBtn");
+  btn.href = data.pdf_url;
+  btn.style.display = "inline-block";
+
 }
 </script>
+
