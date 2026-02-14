@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notes Generator - StudyPrep AI</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      padding-top: 20px;
+    }
+
+    /* .notes-container styles replaced by global .box */
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    input:focus {
+      border-color: var(--primary-color);
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: var(--secondary-color);
+    }
+
+    #output {
+      margin-top: 30px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="container">
+      <nav>
+        <a href="home.html" class="logo">StudyPrep AI</a>
+        <div class="nav-links">
+          <a href="home.html">Home</a>
+          <a href="notes.html" class="active">Notes</a>
+          <a href="solver.html">Solver</a>
+          <a href="planner.html">Planner</a>
+          <a href="mock-test.html">Mock Test</a>
+          <a href="dashboard.html">Dashboard</a>
+          <button id="theme-toggle" type="button"
+            style="background:none; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor:pointer; margin-left:10px; transition: all 0.3s;">🌙
+            Dark</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container page-content">
+    <div class="box">
+      <h2 class="section-title">AI Notes Generator</h2>
+      <p style="text-align: center; margin-bottom: 30px; color: var(--text-light);">Enter a topic and let AI generate
+        structured
+        notes for you.</p>
+
+      <div id="notes-form">
+        <div class="form-group">
+          <input id="topic" placeholder="Enter topic (e.g., Photosynthesis, Newton's Laws...)"
+            onkeypress="if(event.key === 'Enter') generateNotes()" />
+        </div>
+        <button onclick="generateNotes()">Generate Notes</button>
+      </div>
+
+      <div id="output"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>StudyPrep AI</h3>
+          <p>Empowering students with AI-driven tools for smarter, more efficient exam preparation. Plan, solve, and
+            succeed.</p>
+          <div class="social-links">
+            <a href="#">F</a>
+            <a href="#">T</a>
+            <a href="#">I</a>
+            <a href="#">L</a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h3>Quick Links</h3>
+          <ul class="footer-links">
+            <li><a href="home.html">Home</a></li>
+            <li><a href="notes.html">Notes Generator</a></li>
+            <li><a href="planner.html">Study Planner</a></li>
+            <li><a href="solver.html">Paper Solver</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3>Support</h3>
+          <ul class="footer-links">
+            <li><a href="#">Help Center</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2024 StudyPrep AI. All rights reserved. | Built with ❤️ for Students</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+  <script>
+    async function generateNotes() {
+      // e.preventDefault(); // No form, no default action
+      const outputDiv = document.getElementById("output");
+      const topic = document.getElementById("topic").value;
+      const btn = document.querySelector("button[onclick='generateNotes()']");
+
+      outputDiv.innerHTML = '<div style="text-align:center; color: var(--primary-color);">Generating notes... please wait...</div>';
+      btn.disabled = true;
+      btn.textContent = "Generating...";
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/notes/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic })
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch notes");
+
+        const data = await res.json();
+        console.log("API Response:", data); // Debugging
+
+        // Handle different possible response structures
+        let notesContent = data.notes || data.content || data.generated_notes || (typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+
+        // Simple Markdown to HTML conversion (basic)
+        notesContent = notesContent.replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+        outputDiv.innerHTML = `<h3>Generated Notes for: ${topic}</h3><div style="text-align:left; background:#f9f9f9; padding:20px; border-radius:10px;">${notesContent}</div>`;
+      } catch (error) {
+        console.error(error);
+        outputDiv.innerHTML = `<div style="color: red; text-align: center;">Error: Could not generate notes. Ensure the backend server is running. <br> (Mock: Here would be notes for ${topic})</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate Notes";
+      }
+    }
+  </script>
+</body>
+
+</html>

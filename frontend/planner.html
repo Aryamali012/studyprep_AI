@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Study Planner - StudyPrep AI</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <header>
+    <div class="container">
+      <nav>
+        <a href="home.html" class="logo">StudyPrep AI</a>
+        <div class="nav-links">
+          <a href="home.html">Home</a>
+          <a href="notes.html">Notes</a>
+          <a href="solver.html">Solver</a>
+          <a href="planner.html" class="active">Planner</a>
+          <a href="mock-test.html">Mock Test</a>
+          <a href="dashboard.html">Dashboard</a>
+          <button id="theme-toggle" type="button"
+            style="background:none; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor:pointer; margin-left:10px; transition: all 0.3s;">🌙
+            Dark</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+
+  <div class="container page-content">
+    <h2 class="section-title">AI-Powered Study Planner</h2>
+
+    <div class="box" id="initialBox">
+      <h3>Study Period</h3>
+      <label>Start Date:</label>
+      <input type="date" id="startDate">
+
+      <label>End Date:</label>
+      <input type="date" id="endDate">
+
+      <label>Select Exam:</label>
+      <select id="examSelect">
+        <option value="">--Select an Exam--</option>
+        <option value="JEE">JEE (Joint Entrance Examination)</option>
+        <option value="NEET">NEET (Medical Entrance)</option>
+        <option value="UPSC">UPSC (Civil Services)</option>
+        <option value="GATE">GATE (Graduate Aptitude Test)</option>
+        <option value="CAT">CAT (Common Admission Test)</option>
+        <option value="GRE">GRE (Graduate Record Examination)</option>
+        <option value="IELTS">IELTS (English Proficiency)</option>
+      </select>
+
+      <div id="subjectSection" class="hidden"></div>
+    </div>
+
+    <div class="box hidden" id="chapterSection"></div>
+
+    <div class="box hidden" id="timeSection">
+      <h3>Study Time Allocation</h3>
+      <label>Weekday Study Hours (per day):</label>
+      <input type="number" id="weekdayTime" min="1" max="24" placeholder="e.g., 4">
+
+      <label>Weekend Study Hours (per day):</label>
+      <input type="number" id="weekendTime" min="1" max="24" placeholder="e.g., 6">
+
+      <label>Weak Subject (optional):</label>
+      <input type="text" id="weakSubject" placeholder="Subject you need more focus on">
+
+      <button onclick="showSummary()"> Generate Study Plan</button>
+    </div>
+
+    <div class="box hidden" id="summaryBox"></div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>StudyPrep AI</h3>
+          <p>Empowering students with AI-driven tools for smarter, more efficient exam preparation. Plan, solve, and
+            succeed.</p>
+          <div class="social-links">
+            <a href="#">F</a>
+            <a href="#">T</a>
+            <a href="#">I</a>
+            <a href="#">L</a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h3>Quick Links</h3>
+          <ul class="footer-links">
+            <li><a href="home.html">Home</a></li>
+            <li><a href="notes.html">Notes Generator</a></li>
+            <li><a href="planner.html">Study Planner</a></li>
+            <li><a href="solver.html">Paper Solver</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3>Support</h3>
+          <ul class="footer-links">
+            <li><a href="#">Help Center</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2024 StudyPrep AI. All rights reserved. | Built with ❤️ for Students</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+
+  <script>
+    let aiGeneratedSubjects = [];
+    let aiGeneratedChapters = {};
+
+    // Set today as minimum date
+    document.getElementById("startDate").min = new Date().toISOString().split('T')[0];
+    document.getElementById("endDate").min = new Date().toISOString().split('T')[0];
+
+    document.getElementById("examSelect").addEventListener("change", async function () {
+      const exam = this.value;
+      const subjectDiv = document.getElementById("subjectSection");
+
+      if (!exam) {
+        subjectDiv.innerHTML = "";
+        subjectDiv.classList.add("hidden");
+        return;
+      }
+
+      subjectDiv.innerHTML = '<div class="loading"> AI is generating personalized subjects for ' + exam + '</div>';
+      subjectDiv.classList.remove("hidden");
+
+      try {
+        const subjects = await generateSubjects(exam);
+        displaySubjects(subjects);
+      } catch (error) {
+        subjectDiv.innerHTML = '<div class="error">Error generating subjects: ' + error.message + '</div>';
+      }
+    });
+
+    async function generateSubjects(exam) {
+      const response = await fetch("http://127.0.0.1:3000/planner/api/study-planner/generate-subjects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          exam: exam
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      aiGeneratedSubjects = data.subjects || [];
+      return aiGeneratedSubjects;
+    }
+
+    function displaySubjects(subjects) {
+      const subjectDiv = document.getElementById("subjectSection");
+
+      subjectDiv.innerHTML = `
+    <h3>AI-Suggested Subjects <span class="ai-badge">AI Generated</span></h3>
+    <div id="subjectList"></div>
+    <div class="add-custom">
+      <input type="text" id="newSubject" placeholder="Add custom subject">
+      <button onclick="addSubject()">Add</button>
+    </div>
+    <button onclick="confirmSubjects()">✓ Confirm & Generate Chapters</button>
+  `;
+
+      const list = document.getElementById("subjectList");
+      subjects.forEach(sub => {
+        const id = 'sub-' + sub.replace(/\s+/g, '-');
+        list.innerHTML += `
+      <div class="checkbox-item">
+        <input type="checkbox" id="${id}" value="${sub}" checked>
+        <label for="${id}">${sub}</label>
+      </div>
+    `;
+      });
+    }
+
+    function addSubject() {
+      const newSub = document.getElementById("newSubject").value.trim();
+      if (newSub !== "") {
+        const list = document.getElementById("subjectList");
+        const id = 'sub-' + newSub.replace(/\s+/g, '-');
+        list.innerHTML += `
+      <div class="checkbox-item">
+        <input type="checkbox" id="${id}" value="${newSub}" checked>
+        <label for="${id}">${newSub}</label>
+      </div>
+    `;
+        aiGeneratedSubjects.push(newSub);
+        document.getElementById("newSubject").value = "";
+      }
+    }
+
+    async function confirmSubjects() {
+      const checkedSubs = [];
+      document.querySelectorAll("#subjectList input:checked").forEach(el => {
+        checkedSubs.push(el.value);
+      });
+
+      if (checkedSubs.length === 0) {
+        alert("Please select at least one subject!");
+        return;
+      }
+
+      const chapterDiv = document.getElementById("chapterSection");
+      chapterDiv.innerHTML = '<div class="loading">AI is generating chapters for selected subjects</div>';
+      chapterDiv.classList.remove("hidden");
+
+      try {
+        // Generate chapters for all subjects
+        for (const subject of checkedSubs) {
+          const chapters = await generateChapters(subject, document.getElementById("examSelect").value);
+          aiGeneratedChapters[subject] = chapters;
+        }
+
+        displayChapters(checkedSubs);
+        document.getElementById("timeSection").classList.remove("hidden");
+      } catch (error) {
+        chapterDiv.innerHTML = '<div class="error">Error generating chapters: ' + error.message + '</div>';
+      }
+    }
+
+    async function generateChapters(subject, exam) {
+      const response = await fetch("http://127.0.0.1:3000/planner/api/study-planner/generate-chapters", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subject: subject,
+          exam: exam
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      return data.chapters || [];
+    }
+
+    function displayChapters(subjects) {
+      const chapterDiv = document.getElementById("chapterSection");
+      chapterDiv.innerHTML = '<h3>AI-Generated Chapters <span class="ai-badge">AI Generated</span></h3>';
+
+      subjects.forEach(sub => {
+        const safeId = sub.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        chapterDiv.innerHTML += `
+      <div class="subject-chapters" id="chapters-${safeId}">
+        <h4>${sub}</h4>
+        <div class="chapterList" id="chapterList-${safeId}"></div>
+        <div class="add-custom">
+          <input type="text" id="newChapter-${safeId}" placeholder="Add custom chapter for ${sub}">
+          <button onclick="addChapter('${safeId}', '${sub}')">➕ Add</button>
+        </div>
+      </div>
+    `;
+
+        const list = document.getElementById(`chapterList-${safeId}`);
+        if (aiGeneratedChapters[sub]) {
+          aiGeneratedChapters[sub].forEach(ch => {
+            const chId = 'ch-' + safeId + '-' + ch.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+            list.innerHTML += `
+          <div class="checkbox-item">
+            <input type="checkbox" id="${chId}" value="${ch}" checked>
+            <label for="${chId}">${ch}</label>
+          </div>
+        `;
+          });
+        }
+      });
+    }
+
+    function addChapter(safeSubjectId, subject) {
+      const input = document.getElementById(`newChapter-${safeSubjectId}`);
+      const chapterName = input.value.trim();
+
+      if (chapterName !== "") {
+        if (!aiGeneratedChapters[subject]) {
+          aiGeneratedChapters[subject] = [];
+        }
+        aiGeneratedChapters[subject].push(chapterName);
+
+        const list = document.getElementById(`chapterList-${safeSubjectId}`);
+        const chId = 'ch-' + safeSubjectId + '-' + chapterName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        list.innerHTML += `
+      <div class="checkbox-item">
+        <input type="checkbox" id="${chId}" value="${chapterName}" checked>
+        <label for="${chId}">${chapterName}</label>
+      </div>
+    `;
+        input.value = "";
+      }
+    }
+
+    function showSummary() {
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      const exam = document.getElementById("examSelect").value;
+      const weekdayTime = document.getElementById("weekdayTime").value;
+      const weekendTime = document.getElementById("weekendTime").value;
+      const weakSubject = document.getElementById("weakSubject").value;
+
+      // Validation
+      if (!startDate || !endDate) {
+        alert("Please select start and end dates!");
+        return;
+      }
+      if (!weekdayTime || !weekendTime) {
+        alert("Please enter study hours!");
+        return;
+      }
+
+      const subjects = [];
+      document.querySelectorAll("#subjectList input:checked").forEach(el => {
+        subjects.push(el.value);
+      });
+
+      const chaptersBySubject = {};
+      subjects.forEach(sub => {
+        const safeId = sub.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const checked = [];
+        document.querySelectorAll(`#chapterList-${safeId} input[type=checkbox]:checked`).forEach(el => {
+          checked.push(el.value);
+        });
+        chaptersBySubject[sub] = checked;
+      });
+
+      const sumDiv = document.getElementById("summaryBox");
+      sumDiv.classList.remove("hidden");
+
+      let chaptersHtml = '';
+      Object.keys(chaptersBySubject).forEach(sub => {
+        chaptersHtml += `
+      <div class="summary-item">
+        <strong>${sub}:</strong> ${chaptersBySubject[sub].join(", ")}
+      </div>
+    `;
+      });
+
+      sumDiv.innerHTML = `
+    <h3>Study Plan Summary</h3>
+    <div class="summary-item">
+      <strong>Period:</strong> ${startDate} to ${endDate}
+    </div>
+    <div class="summary-item">
+      <strong>Exam:</strong> ${exam}
+    </div>
+    <div class="summary-item">
+      <strong> Subjects:</strong> ${subjects.join(", ")}
+    </div>
+    ${chaptersHtml}
+    <div class="summary-item">
+      <strong>Weekday Hours:</strong> ${weekdayTime} hours/day
+    </div>
+    <div class="summary-item">
+      <strong>Weekend Hours:</strong> ${weekendTime} hours/day
+    </div>
+    ${weakSubject ? `<div class="summary-item"><strong>Weak Subject:</strong> ${weakSubject}</div>` : ''}
+    
+    <div class="button-group">
+      <button onclick="editPlan()">Modify Plan</button>
+      <button onclick="generateAIPlan()">Generate Detailed Schedule</button>
+    </div>
+  `;
+
+      // Hide other boxes
+      document.querySelectorAll(".box").forEach(box => {
+        if (box.id !== "summaryBox") box.style.display = "none";
+      });
+
+      // Scroll to summary
+      sumDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function editPlan() {
+      document.getElementById("summaryBox").classList.add("hidden");
+      document.querySelectorAll(".box").forEach(box => {
+        if (box.id !== "summaryBox") box.style.display = "block";
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function generateAIPlan() {
+      const button = event.target;
+      button.disabled = true;
+      button.textContent = "Generating detailed plan...";
+
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      const exam = document.getElementById("examSelect").value;
+      const weekdayTime = document.getElementById("weekdayTime").value;
+      const weekendTime = document.getElementById("weekendTime").value;
+      const weakSubject = document.getElementById("weakSubject").value;
+
+      // Gather all subjects and chapters
+      const subjects = [];
+      document.querySelectorAll("#subjectList input:checked").forEach(el => {
+        subjects.push(el.value);
+      });
+
+      const chaptersBySubject = {};
+      subjects.forEach(sub => {
+        const safeId = sub.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const checked = [];
+        document.querySelectorAll(`#chapterList-${safeId} input[type=checkbox]:checked`).forEach(el => {
+          checked.push(el.value);
+        });
+        chaptersBySubject[sub] = checked;
+      });
+
+      const payload = {
+        startDate,
+        endDate,
+        exam,
+        weekdayTime,
+        weekendTime,
+        weakSubject,
+        subjects,
+        chapters: chaptersBySubject
+      };
+
+      try {
+        const response = await fetch("http://127.0.0.1:3000/planner/api/study-planner/generate-plan", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Plan Generated:", data);
+
+        alert("AI Study Plan Generated Successfully!\n\n(See console for full details)\n" + JSON.stringify(data.data, null, 2));
+      } catch (error) {
+        console.error("Error generating plan:", error);
+        alert("Error generating plan: " + error.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Generate Detailed Schedule";
+      }
+    }
+  </script>
+
+</body>
+
+</html>
