@@ -7,6 +7,69 @@
   <title>AI Study Planner - StudyPrep AI</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      padding-top: 20px;
+    }
+
+    /* Step wizard progress */
+    .progress-bar-track {
+      background: rgba(0, 0, 0, 0.06);
+      height: 8px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      overflow: hidden;
+    }
+
+    [data-theme="dark"] .progress-bar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .progress-fill {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      height: 100%;
+      width: 20%;
+      transition: width 0.3s ease;
+      border-radius: 10px;
+    }
+
+    .progress-text {
+      text-align: center;
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    /* Step visibility */
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #output {
+      margin-top: 30px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: var(--text-color);
+    }
+  </style>
 </head>
 
 <body>
@@ -30,50 +93,177 @@
     </div>
   </header>
 
-
   <div class="container page-content">
-    <h2 class="section-title">AI-Powered Study Planner</h2>
+    <div class="box">
+      <h2 class="section-title">AI-Powered Study Planner</h2>
+      <p style="text-align: center; margin-bottom: 30px; color: var(--text-light);">Create your personalized study
+        schedule</p>
 
-    <div class="box" id="initialBox">
-      <h3>Study Period</h3>
-      <label>Start Date:</label>
-      <input type="date" id="startDate">
+      <div class="progress-text">
+        <span id="progressText">Step 1 of 5</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
 
-      <label>End Date:</label>
-      <input type="date" id="endDate">
+      <div class="error-message" id="errorMessage"
+        style="background: rgba(244,67,54,0.1); border: 2px solid #f44336; color: #c62828; padding: 12px 15px; border-radius: 10px; margin-bottom: 20px; display: none;">
+      </div>
 
-      <label>Select Exam:</label>
-      <select id="examSelect">
-        <option value="">--Select an Exam--</option>
-        <option value="JEE">JEE (Joint Entrance Examination)</option>
-        <option value="NEET">NEET (Medical Entrance)</option>
-        <option value="UPSC">UPSC (Civil Services)</option>
-        <option value="GATE">GATE (Graduate Aptitude Test)</option>
-        <option value="CAT">CAT (Common Admission Test)</option>
-        <option value="GRE">GRE (Graduate Record Examination)</option>
-        <option value="IELTS">IELTS (English Proficiency)</option>
-      </select>
+      <form id="studyPlannerForm">
 
-      <div id="subjectSection" class="hidden"></div>
+        <!-- Step 1: Dates -->
+        <div class="step active" data-step="1">
+          <h3>📅 Study Duration</h3>
+
+          <label for="startDate">Start Date</label>
+          <input type="date" id="startDate" name="startDate" required>
+
+          <label for="endDate">End Date (Exam Date)</label>
+          <input type="date" id="endDate" name="endDate" required>
+
+          <div id="daysInfo"
+            style="display:none; margin:5px 0 0; text-align:left; padding:4px 0; color:var(--primary-color); font-weight:600; font-size:0.85em;">
+            <p id="daysText" style="margin:0;"></p>
+          </div>
+        </div>
+
+        <!-- Step 2: Exam Selection -->
+        <div class="step" data-step="2">
+          <h3>📖 Select Your Exam</h3>
+
+          <label for="exam">Which exam are you preparing for?</label>
+          <select id="exam" name="exam" required>
+            <option value="">Select an exam...</option>
+            <option value="JEE">JEE (Main/Advanced)</option>
+            <option value="NEET">NEET</option>
+            <option value="GATE">GATE</option>
+            <option value="CAT">CAT</option>
+            <option value="UPSC">UPSC</option>
+            <option value="IELTS">IELTS</option>
+          </select>
+
+          <!-- GATE Branch Selection -->
+          <div id="gateBranchSection" style="display: none; margin-top: 15px;">
+            <label for="gateBranch">Select Your GATE Branch/Stream</label>
+            <select id="gateBranch" name="gateBranch">
+              <option value="">Select branch...</option>
+              <option value="CS">Computer Science (CS)</option>
+              <option value="EC">Electronics & Communication (EC)</option>
+              <option value="EE">Electrical Engineering (EE)</option>
+              <option value="ME">Mechanical Engineering (ME)</option>
+              <option value="CE">Civil Engineering (CE)</option>
+              <option value="IN">Instrumentation Engineering (IN)</option>
+              <option value="CH">Chemical Engineering (CH)</option>
+              <option value="BT">Biotechnology (BT)</option>
+              <option value="PI">Production & Industrial (PI)</option>
+            </select>
+          </div>
+
+          <div id="examInfo"
+            style="display:none; margin:5px 0 0; text-align:left; padding:4px 0; color:var(--primary-color); font-weight:600; font-size:0.85em;">
+            <p style="margin:0;">✓ Selected: <span id="selectedExam"></span></p>
+          </div>
+        </div>
+
+        <!-- Step 3: Subjects and Chapters Selection -->
+        <div class="step" data-step="3">
+          <h3>📚 Select Subjects & Chapters</h3>
+
+          <input type="text" id="searchSubjects" placeholder="🔍 Search subjects or chapters..."
+            style="margin-bottom: 20px;">
+
+          <div id="subjectsContainer"></div>
+
+          <!-- Custom Subject/Chapter Addition -->
+          <div class="subject-chapters" style="border-left-color: #ff9800;">
+            <h3 style="color: #f57c00; border: none; padding: 0;">➕ Add Custom Subject</h3>
+
+            <div class="add-custom">
+              <input type="text" id="customSubjectName" placeholder="Enter subject name (e.g., Psychology)">
+              <button type="button" onclick="addCustomSubject()">Add Subject</button>
+            </div>
+
+            <div id="customSubjectsList"></div>
+
+            <div id="customChapterSection" style="display: none; margin-top: 20px;">
+              <h3 style="color: var(--primary-color); border: none; padding: 0;">➕ Add Chapters to: <span
+                  id="customChapterSubjectName"></span></h3>
+              <div class="add-custom">
+                <input type="text" id="customChapterName" placeholder="Enter chapter name">
+                <button type="button" onclick="addCustomChapter()">Add Chapter</button>
+              </div>
+              <div id="customChaptersList"></div>
+              <button type="button" onclick="closeCustomChapterSection()"
+                style="margin-top: 10px; background: rgba(0,0,0,0.05); color: var(--text-color); box-shadow: none;">Done</button>
+            </div>
+          </div>
+
+          <div id="selectionSummary"
+            style="display:none; margin:5px 0 0; text-align:left; padding:4px 0; color:var(--primary-color); font-weight:600; font-size:0.85em;">
+            <p style="margin:0;">✓ Selected: <span id="summaryText"></span></p>
+          </div>
+        </div>
+
+        <!-- Step 4: Study Hours -->
+        <div class="step" data-step="4">
+          <h3>⏰ Daily Study Hours</h3>
+
+          <label for="weekdayHours">Weekday Study Hours (Monday - Friday)</label>
+          <input type="number" id="weekdayHours" name="weekdayHours" min="1" max="24" placeholder="e.g., 4" required>
+          <p style="font-size: 0.85em; color: var(--text-light); margin-top: 5px;">How many hours can you study on
+            weekdays?</p>
+
+          <label for="weekendHours">Weekend Study Hours (Saturday - Sunday)</label>
+          <input type="number" id="weekendHours" name="weekendHours" min="1" max="24" placeholder="e.g., 8" required>
+          <p style="font-size: 0.85em; color: var(--text-light); margin-top: 5px;">How many hours can you study on
+            weekends?</p>
+
+          <div id="weeklyHoursInfo"
+            style="display:none; margin:5px 0 0; text-align:left; padding:4px 0; color:var(--primary-color); font-weight:600; font-size:0.85em;">
+            <p style="margin:0;">📊 Weekly Study Hours: <span id="weeklyHours"></span> hours</p>
+          </div>
+        </div>
+
+        <!-- Step 5: Personalized Information -->
+        <div class="step" data-step="5">
+          <h3>🎯 Personalized Information</h3>
+
+          <label>Weak Subjects (Select all that apply)</label>
+          <div id="weakSubjectsContainer"></div>
+
+          <label for="focusAreas">Focus Areas / Additional Remarks</label>
+          <textarea id="focusAreas" name="focusAreas"
+            style="width:100%; padding:12px; border:2px solid #eee; border-radius:10px; font-family:inherit; font-size:1em; min-height:100px; box-sizing:border-box; resize:vertical;"
+            placeholder="e.g., Need more practice in numerical problems, Focus on previous year questions, Improve speed in problem-solving"></textarea>
+          <p style="font-size: 0.85em; color: var(--text-light); margin-top: 5px;">Any specific areas where you need to
+            focus more?</p>
+
+          <div class="checkbox-item" style="margin-top: 20px;">
+            <input type="checkbox" id="emailReminders" name="emailReminders" checked>
+            <label for="emailReminders">Enable daily email reminders with study plan and practice quiz</label>
+          </div>
+
+          <div class="loading" style="margin-top: 20px;">
+            <p>📧 You will receive daily emails with your study schedule and personalized practice questions based on
+              chapters you've learned.</p>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="button-group" style="margin-top: 40px;">
+          <button type="button" id="prevBtn" onclick="changeStep(-1)" style="display: none;">
+            ← Previous
+          </button>
+          <button type="button" id="nextBtn" onclick="changeStep(1)">
+            Next →
+          </button>
+          <button type="submit" id="submitBtn" style="display: none;">
+            🚀 Generate Study Plan
+          </button>
+        </div>
+      </form>
     </div>
-
-    <div class="box hidden" id="chapterSection"></div>
-
-    <div class="box hidden" id="timeSection">
-      <h3>Study Time Allocation</h3>
-      <label>Weekday Study Hours (per day):</label>
-      <input type="number" id="weekdayTime" min="1" max="24" placeholder="e.g., 4">
-
-      <label>Weekend Study Hours (per day):</label>
-      <input type="number" id="weekendTime" min="1" max="24" placeholder="e.g., 6">
-
-      <label>Weak Subject (optional):</label>
-      <input type="text" id="weakSubject" placeholder="Subject you need more focus on">
-
-      <button onclick="showSummary()"> Generate Study Plan</button>
-    </div>
-
-    <div class="box hidden" id="summaryBox"></div>
   </div>
 
   <footer>
@@ -120,363 +310,11 @@
 
   <script src="assets/js/main.js"></script>
 
-  <script>
-    let aiGeneratedSubjects = [];
-    let aiGeneratedChapters = {};
+  <!-- Include the subjects database -->
+  <script src="subjects-data.js"></script>
 
-    // Set today as minimum date
-    document.getElementById("startDate").min = new Date().toISOString().split('T')[0];
-    document.getElementById("endDate").min = new Date().toISOString().split('T')[0];
-
-    document.getElementById("examSelect").addEventListener("change", async function () {
-      const exam = this.value;
-      const subjectDiv = document.getElementById("subjectSection");
-
-      if (!exam) {
-        subjectDiv.innerHTML = "";
-        subjectDiv.classList.add("hidden");
-        return;
-      }
-
-      subjectDiv.innerHTML = '<div class="loading"> AI is generating personalized subjects for ' + exam + '</div>';
-      subjectDiv.classList.remove("hidden");
-
-      try {
-        const subjects = await generateSubjects(exam);
-        displaySubjects(subjects);
-      } catch (error) {
-        subjectDiv.innerHTML = '<div class="error">Error generating subjects: ' + error.message + '</div>';
-      }
-    });
-
-    async function generateSubjects(exam) {
-      const response = await fetch("http://127.0.0.1:3000/planner/api/study-planner/generate-subjects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          exam: exam
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      aiGeneratedSubjects = data.subjects || [];
-      return aiGeneratedSubjects;
-    }
-
-    function displaySubjects(subjects) {
-      const subjectDiv = document.getElementById("subjectSection");
-
-      subjectDiv.innerHTML = `
-    <h3>AI-Suggested Subjects <span class="ai-badge">AI Generated</span></h3>
-    <div id="subjectList"></div>
-    <div class="add-custom">
-      <input type="text" id="newSubject" placeholder="Add custom subject">
-      <button onclick="addSubject()">Add</button>
-    </div>
-    <button onclick="confirmSubjects()">✓ Confirm & Generate Chapters</button>
-  `;
-
-      const list = document.getElementById("subjectList");
-      subjects.forEach(sub => {
-        const id = 'sub-' + sub.replace(/\s+/g, '-');
-        list.innerHTML += `
-      <div class="checkbox-item">
-        <input type="checkbox" id="${id}" value="${sub}" checked>
-        <label for="${id}">${sub}</label>
-      </div>
-    `;
-      });
-    }
-
-    function addSubject() {
-      const newSub = document.getElementById("newSubject").value.trim();
-      if (newSub !== "") {
-        const list = document.getElementById("subjectList");
-        const id = 'sub-' + newSub.replace(/\s+/g, '-');
-        list.innerHTML += `
-      <div class="checkbox-item">
-        <input type="checkbox" id="${id}" value="${newSub}" checked>
-        <label for="${id}">${newSub}</label>
-      </div>
-    `;
-        aiGeneratedSubjects.push(newSub);
-        document.getElementById("newSubject").value = "";
-      }
-    }
-
-    async function confirmSubjects() {
-      const checkedSubs = [];
-      document.querySelectorAll("#subjectList input:checked").forEach(el => {
-        checkedSubs.push(el.value);
-      });
-
-      if (checkedSubs.length === 0) {
-        alert("Please select at least one subject!");
-        return;
-      }
-
-      const chapterDiv = document.getElementById("chapterSection");
-      chapterDiv.innerHTML = '<div class="loading">AI is generating chapters for selected subjects</div>';
-      chapterDiv.classList.remove("hidden");
-
-      try {
-        // Generate chapters for all subjects
-        for (const subject of checkedSubs) {
-          const chapters = await generateChapters(subject, document.getElementById("examSelect").value);
-          aiGeneratedChapters[subject] = chapters;
-        }
-
-        displayChapters(checkedSubs);
-        document.getElementById("timeSection").classList.remove("hidden");
-      } catch (error) {
-        chapterDiv.innerHTML = '<div class="error">Error generating chapters: ' + error.message + '</div>';
-      }
-    }
-
-    async function generateChapters(subject, exam) {
-      const response = await fetch("http://127.0.0.1:3000/planner/api/study-planner/generate-chapters", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          subject: subject,
-          exam: exam
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      return data.chapters || [];
-    }
-
-    function displayChapters(subjects) {
-      const chapterDiv = document.getElementById("chapterSection");
-      chapterDiv.innerHTML = '<h3>AI-Generated Chapters <span class="ai-badge">AI Generated</span></h3>';
-
-      subjects.forEach(sub => {
-        const safeId = sub.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-        chapterDiv.innerHTML += `
-      <div class="subject-chapters" id="chapters-${safeId}">
-        <h4>${sub}</h4>
-        <div class="chapterList" id="chapterList-${safeId}"></div>
-        <div class="add-custom">
-          <input type="text" id="newChapter-${safeId}" placeholder="Add custom chapter for ${sub}">
-          <button onclick="addChapter('${safeId}', '${sub}')">➕ Add</button>
-        </div>
-      </div>
-    `;
-
-        const list = document.getElementById(`chapterList-${safeId}`);
-        if (aiGeneratedChapters[sub]) {
-          aiGeneratedChapters[sub].forEach(ch => {
-            const chId = 'ch-' + safeId + '-' + ch.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-            list.innerHTML += `
-          <div class="checkbox-item">
-            <input type="checkbox" id="${chId}" value="${ch}" checked>
-            <label for="${chId}">${ch}</label>
-          </div>
-        `;
-          });
-        }
-      });
-    }
-
-    function addChapter(safeSubjectId, subject) {
-      const input = document.getElementById(`newChapter-${safeSubjectId}`);
-      const chapterName = input.value.trim();
-
-      if (chapterName !== "") {
-        if (!aiGeneratedChapters[subject]) {
-          aiGeneratedChapters[subject] = [];
-        }
-        aiGeneratedChapters[subject].push(chapterName);
-
-        const list = document.getElementById(`chapterList-${safeSubjectId}`);
-        const chId = 'ch-' + safeSubjectId + '-' + chapterName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-        list.innerHTML += `
-      <div class="checkbox-item">
-        <input type="checkbox" id="${chId}" value="${chapterName}" checked>
-        <label for="${chId}">${chapterName}</label>
-      </div>
-    `;
-        input.value = "";
-      }
-    }
-
-    function showSummary() {
-      const startDate = document.getElementById("startDate").value;
-      const endDate = document.getElementById("endDate").value;
-      const exam = document.getElementById("examSelect").value;
-      const weekdayTime = document.getElementById("weekdayTime").value;
-      const weekendTime = document.getElementById("weekendTime").value;
-      const weakSubject = document.getElementById("weakSubject").value;
-
-      // Validation
-      if (!startDate || !endDate) {
-        alert("Please select start and end dates!");
-        return;
-      }
-      if (!weekdayTime || !weekendTime) {
-        alert("Please enter study hours!");
-        return;
-      }
-
-      const subjects = [];
-      document.querySelectorAll("#subjectList input:checked").forEach(el => {
-        subjects.push(el.value);
-      });
-
-      const chaptersBySubject = {};
-      subjects.forEach(sub => {
-        const safeId = sub.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-        const checked = [];
-        document.querySelectorAll(`#chapterList-${safeId} input[type=checkbox]:checked`).forEach(el => {
-          checked.push(el.value);
-        });
-        chaptersBySubject[sub] = checked;
-      });
-
-      const sumDiv = document.getElementById("summaryBox");
-      sumDiv.classList.remove("hidden");
-
-      let chaptersHtml = '';
-      Object.keys(chaptersBySubject).forEach(sub => {
-        chaptersHtml += `
-      <div class="summary-item">
-        <strong>${sub}:</strong> ${chaptersBySubject[sub].join(", ")}
-      </div>
-    `;
-      });
-
-      sumDiv.innerHTML = `
-    <h3>Study Plan Summary</h3>
-    <div class="summary-item">
-      <strong>Period:</strong> ${startDate} to ${endDate}
-    </div>
-    <div class="summary-item">
-      <strong>Exam:</strong> ${exam}
-    </div>
-    <div class="summary-item">
-      <strong> Subjects:</strong> ${subjects.join(", ")}
-    </div>
-    ${chaptersHtml}
-    <div class="summary-item">
-      <strong>Weekday Hours:</strong> ${weekdayTime} hours/day
-    </div>
-    <div class="summary-item">
-      <strong>Weekend Hours:</strong> ${weekendTime} hours/day
-    </div>
-    ${weakSubject ? `<div class="summary-item"><strong>Weak Subject:</strong> ${weakSubject}</div>` : ''}
-    
-    <div class="button-group">
-      <button onclick="editPlan()">Modify Plan</button>
-      <button onclick="generateAIPlan()">Generate Detailed Schedule</button>
-    </div>
-  `;
-
-      // Hide other boxes
-      document.querySelectorAll(".box").forEach(box => {
-        if (box.id !== "summaryBox") box.style.display = "none";
-      });
-
-      // Scroll to summary
-      sumDiv.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function editPlan() {
-      document.getElementById("summaryBox").classList.add("hidden");
-      document.querySelectorAll(".box").forEach(box => {
-        if (box.id !== "summaryBox") box.style.display = "block";
-      });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    async function generateAIPlan() {
-      const button = event.target;
-      button.disabled = true;
-      button.textContent = "Generating detailed plan...";
-
-      const startDate = document.getElementById("startDate").value;
-      const endDate = document.getElementById("endDate").value;
-      const exam = document.getElementById("examSelect").value;
-      const weekdayTime = document.getElementById("weekdayTime").value;
-      const weekendTime = document.getElementById("weekendTime").value;
-      const weakSubject = document.getElementById("weakSubject").value;
-
-      // Gather all subjects and chapters
-      const subjects = [];
-      document.querySelectorAll("#subjectList input:checked").forEach(el => {
-        subjects.push(el.value);
-      });
-
-      const chaptersBySubject = {};
-      subjects.forEach(sub => {
-        const safeId = sub.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-        const checked = [];
-        document.querySelectorAll(`#chapterList-${safeId} input[type=checkbox]:checked`).forEach(el => {
-          checked.push(el.value);
-        });
-        chaptersBySubject[sub] = checked;
-      });
-
-      const payload = {
-        startDate,
-        endDate,
-        exam,
-        weekdayTime,
-        weekendTime,
-        weakSubject,
-        subjects,
-        chapters: chaptersBySubject
-      };
-
-      try {
-        const response = await fetch("http://127.0.0.1:3000/planner/api/study-planner/generate-plan", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Plan Generated:", data);
-
-        alert("AI Study Plan Generated Successfully!\n\n(See console for full details)\n" + JSON.stringify(data.data, null, 2));
-      } catch (error) {
-        console.error("Error generating plan:", error);
-        alert("Error generating plan: " + error.message);
-      } finally {
-        button.disabled = false;
-        button.textContent = "Generate Detailed Schedule";
-      }
-    }
-  </script>
-
+  <!-- Main application script -->
+  <script src="app.js"></script>
 </body>
 
 </html>
