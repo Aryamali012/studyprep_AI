@@ -1,6 +1,9 @@
 """
-server.py  –  StudyPrep AI  |  Flask + SQLite + JWT Auth
+server.py  –  StudyPrep AI  |  Flask + MySQL + JWT Auth
 Run:  python server.py
+
+Before first run, apply the schema:
+    mysql -u root -p < schema.sql
 
 Endpoints
 ─────────
@@ -18,7 +21,6 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 from flask import Flask, jsonify
-from server_db.connection import init_db
 from jwt_auth.core import JWTAuth
 from jwt_auth.utils import JWTUtil
 
@@ -39,9 +41,6 @@ def add_cors(response):
 @app.route("/me",       methods=["OPTIONS"])
 def handle_preflight():
     return "", 204
-
-# ── DB init ───────────────────────────────────────────────────────────────────
-init_db()
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 

@@ -20,6 +20,13 @@ from server_db.connection import get_connection
 from jwt_auth.utils import JWTUtil
 
 
+def _execute(conn, sql: str, params: tuple = ()):
+    """Run a query on a dict-cursor and return the cursor."""
+    cur = conn.cursor(dictionary=True)
+    cur.execute(sql, params)
+    return cur
+
+
 def _issue_token_pair(user_id: str, email: str) -> tuple[str, str]:
     """
     Create an access token + refresh token, persist the refresh token hash,
@@ -30,13 +37,19 @@ def _issue_token_pair(user_id: str, email: str) -> tuple[str, str]:
 
     token_id = str(uuid.uuid4())
     conn     = get_connection()
-    with conn:
-        conn.execute(
+    try:
+        _execute(conn,
             """INSERT INTO refresh_tokens (token_id, user_id, token_hash, expires_at)
-               VALUES (?, ?, ?, ?)""",
-            (token_id, user_id, rt_hash, rt_expiry.isoformat()),
+               VALUES (%s, %s, %s, %s)""",
+            (token_id, user_id, rt_hash, rt_expiry.strftime("%Y-%m-%d %H:%M:%S")),
         )
-    conn.close()
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
     return access_token, raw_rt
 
 
@@ -51,10 +64,10 @@ class JWTAuth:
         password  = (data.get("password")  or "")
 
         errors = []
-        if not full_name:              errors.append("full_name is required.")
-        if not email:                  errors.append("email is required.")
-        if not password:               errors.append("password is required.")
-        elif len(password) < 6:        errors.append("password must be at least 6 characters.")
+        if not full_name:       errors.append("full_name is required.")
+        if not email:           errors.append("email is required.")
+        if not password:        errors.append("password is required.")
+        elif len(password) < 6: errors.append("password must be at least 6 characters.")
         if errors:
             return jsonify({"error": " ".join(errors)}), 400
 
@@ -63,13 +76,14 @@ class JWTAuth:
 
         conn = get_connection()
         try:
-            with conn:
-                conn.execute(
-                    "INSERT INTO users (user_id, full_name, email, password_hash) VALUES (?,?,?,?)",
-                    (user_id, full_name, email, password_hash),
-                )
+            _execute(conn,
+                "INSERT INTO users (user_id, full_name, email, password_hash) VALUES (%s,%s,%s,%s)",
+                (user_id, full_name, email, password_hash),
+            )
+            conn.commit()
         except Exception as exc:
-            if "UNIQUE" in str(exc):
+            conn.rollback()
+            if "Duplicate entry" in str(exc) or "1062" in str(exc):
                 return jsonify({"error": "An account with this email already exists."}), 409
             return jsonify({"error": "Registration failed. Please try again."}), 500
         finally:
@@ -95,10 +109,11 @@ class JWTAuth:
 
         conn = get_connection()
         try:
-            row = conn.execute(
-                "SELECT user_id, full_name, email, password_hash FROM users WHERE email = ?",
+            cur = _execute(conn,
+                "SELECT user_id, full_name, email, password_hash FROM users WHERE email = %s",
                 (email,),
-            ).fetchone()
+            )
+            row = cur.fetchone()
         finally:
             conn.close()
 
@@ -126,8 +141,8 @@ class JWTAuth:
         If a previously-revoked token is presented, ALL tokens for the user
         are revoked (refresh token theft detection).
         """
-        data    = request.get_json(silent=True) or {}
-        raw_rt  = (data.get("refresh_token") or "").strip()
+        data   = request.get_json(silent=True) or {}
+        raw_rt = (data.get("refresh_token") or "").strip()
 
         if not raw_rt:
             return jsonify({"error": "refresh_token is required.", "code": "NO_REFRESH_TOKEN"}), 400
@@ -136,59 +151,59 @@ class JWTAuth:
         conn    = get_connection()
 
         try:
-            row = conn.execute(
-                "SELECT token_id, user_id, expires_at, revoked FROM refresh_tokens WHERE token_hash = ?",
+            cur = _execute(conn,
+                "SELECT token_id, user_id, expires_at, revoked FROM refresh_tokens WHERE token_hash = %s",
                 (rt_hash,),
-            ).fetchone()
+            )
+            row = cur.fetchone()
 
-            # ── Token not found in DB at all ──────────────────────────────────
+            # ── Not found ─────────────────────────────────────────────────────
             if row is None:
                 return jsonify({"error": "Invalid refresh token.", "code": "INVALID_REFRESH_TOKEN"}), 401
 
-            # ── Theft detection: token was already revoked ─────────────────────
+            # ── Theft detection ───────────────────────────────────────────────
             if row["revoked"]:
-                with conn:
-                    conn.execute(
-                        "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ?",
-                        (row["user_id"],),
-                    )
+                _execute(conn,
+                    "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = %s",
+                    (row["user_id"],),
+                )
+                conn.commit()
                 return jsonify({
                     "error": "Refresh token already used. All sessions revoked. Please log in again.",
                     "code":  "REFRESH_TOKEN_REUSE",
                 }), 401
 
-            # ── Expiry check ───────────────────────────────────────────────────
-            expires_at = datetime.fromisoformat(row["expires_at"])
+            # ── Expiry check ──────────────────────────────────────────────────
+            expires_at = row["expires_at"]
+            if isinstance(expires_at, str):
+                expires_at = datetime.fromisoformat(expires_at)
             if expires_at.tzinfo is None:
                 expires_at = expires_at.replace(tzinfo=timezone.utc)
             if datetime.now(tz=timezone.utc) > expires_at:
-                with conn:
-                    conn.execute(
-                        "UPDATE refresh_tokens SET revoked = 1 WHERE token_id = ?",
-                        (row["token_id"],),
-                    )
-                return jsonify({"error": "Refresh token expired. Please log in again.", "code": "REFRESH_TOKEN_EXPIRED"}), 401
-
-            # ── Revoke old token ───────────────────────────────────────────────
-            with conn:
-                conn.execute(
-                    "UPDATE refresh_tokens SET revoked = 1 WHERE token_id = ?",
+                _execute(conn,
+                    "UPDATE refresh_tokens SET revoked = 1 WHERE token_id = %s",
                     (row["token_id"],),
                 )
+                conn.commit()
+                return jsonify({"error": "Refresh token expired. Please log in again.", "code": "REFRESH_TOKEN_EXPIRED"}), 401
+
+            # ── Revoke old token ──────────────────────────────────────────────
+            _execute(conn,
+                "UPDATE refresh_tokens SET revoked = 1 WHERE token_id = %s",
+                (row["token_id"],),
+            )
+            conn.commit()
 
             user_id = row["user_id"]
-
-            # Fetch user email
-            user_row = conn.execute(
-                "SELECT email FROM users WHERE user_id = ?", (user_id,)
-            ).fetchone()
+            cur = _execute(conn, "SELECT email FROM users WHERE user_id = %s", (user_id,))
+            user_row = cur.fetchone()
             if user_row is None:
                 return jsonify({"error": "User not found.", "code": "USER_NOT_FOUND"}), 404
 
         finally:
             conn.close()
 
-        # ── Issue new token pair (rotation) ────────────────────────────────────
+        # ── Issue new pair (rotation) ─────────────────────────────────────────
         new_access, new_refresh = _issue_token_pair(user_id, user_row["email"])
         return jsonify({
             "access_token":  new_access,
@@ -200,10 +215,10 @@ class JWTAuth:
     def logout():
         """
         Revoke the supplied refresh token.
-        Pass  all_devices=true  to revoke every refresh token for the user.
+        Pass all_devices=true to revoke every refresh token for the user.
         """
-        data       = request.get_json(silent=True) or {}
-        raw_rt     = (data.get("refresh_token") or "").strip()
+        data        = request.get_json(silent=True) or {}
+        raw_rt      = (data.get("refresh_token") or "").strip()
         all_devices = data.get("all_devices", False)
 
         if not raw_rt:
@@ -212,25 +227,29 @@ class JWTAuth:
         rt_hash = JWTUtil.hash_refresh_token(raw_rt)
         conn    = get_connection()
         try:
-            row = conn.execute(
-                "SELECT token_id, user_id FROM refresh_tokens WHERE token_hash = ?",
+            cur = _execute(conn,
+                "SELECT token_id, user_id FROM refresh_tokens WHERE token_hash = %s",
                 (rt_hash,),
-            ).fetchone()
+            )
+            row = cur.fetchone()
 
             if row is None:
                 return jsonify({"message": "Already logged out."}), 200
 
-            with conn:
-                if all_devices:
-                    conn.execute(
-                        "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ?",
-                        (row["user_id"],),
-                    )
-                else:
-                    conn.execute(
-                        "UPDATE refresh_tokens SET revoked = 1 WHERE token_id = ?",
-                        (row["token_id"],),
-                    )
+            if all_devices:
+                _execute(conn,
+                    "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = %s",
+                    (row["user_id"],),
+                )
+            else:
+                _execute(conn,
+                    "UPDATE refresh_tokens SET revoked = 1 WHERE token_id = %s",
+                    (row["token_id"],),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
@@ -242,10 +261,11 @@ class JWTAuth:
     def me():
         conn = get_connection()
         try:
-            row = conn.execute(
-                "SELECT user_id, full_name, email, created_at FROM users WHERE user_id = ?",
+            cur = _execute(conn,
+                "SELECT user_id, full_name, email, created_at FROM users WHERE user_id = %s",
                 (g.user_id,),
-            ).fetchone()
+            )
+            row = cur.fetchone()
         finally:
             conn.close()
 
@@ -256,6 +276,5 @@ class JWTAuth:
             "user_id":    row["user_id"],
             "full_name":  row["full_name"],
             "email":      row["email"],
-            "created_at": row["created_at"],
+            "created_at": str(row["created_at"]),
         }}), 200
-

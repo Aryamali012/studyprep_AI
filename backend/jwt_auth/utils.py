@@ -15,14 +15,13 @@ import jwt
 import os
 import hashlib
 import secrets
-import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify, g
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
-JWT_SECRET            = os.getenv("JWT_SECRET", "change_me_in_production")
+JWT_SECRET            = os.getenv("JWT_SECRET",            "change_me_in_production")
 JWT_ALGORITHM         = "HS256"
 ACCESS_TOKEN_MINUTES  = int(os.getenv("ACCESS_TOKEN_MINUTES",  "15"))
 REFRESH_TOKEN_DAYS    = int(os.getenv("REFRESH_TOKEN_DAYS",    "30"))
@@ -36,9 +35,7 @@ class JWTUtil:
     def hash_password(plain: str) -> str:
         """PBKDF2-HMAC-SHA256, 260k iterations, random 256-bit salt."""
         salt = secrets.token_hex(32)
-        dk   = hashlib.pbkdf2_hmac(
-            "sha256", plain.encode(), salt.encode(), iterations=260_000
-        )
+        dk   = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt.encode(), iterations=260_000)
         return f"{salt}${dk.hex()}"
 
     @staticmethod
@@ -47,9 +44,7 @@ class JWTUtil:
             salt, dk_hex = stored.split("$", 1)
         except ValueError:
             return False
-        dk = hashlib.pbkdf2_hmac(
-            "sha256", plain.encode(), salt.encode(), iterations=260_000
-        )
+        dk = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt.encode(), iterations=260_000)
         return secrets.compare_digest(dk.hex(), dk_hex)
 
     # ── Access token (JWT) ─────────────────────────────────────────────────────
@@ -83,19 +78,17 @@ class JWTUtil:
     @staticmethod
     def generate_refresh_token() -> tuple[str, str, datetime]:
         """
-        Generate a cryptographically random refresh token.
         Returns (raw_token, token_hash, expires_at).
         raw_token  → sent to the client, never stored in DB.
         token_hash → stored in DB for safe comparison.
         """
-        raw        = secrets.token_hex(64)          # 128-char hex string
+        raw        = secrets.token_hex(64)
         token_hash = hashlib.sha256(raw.encode()).hexdigest()
         expires_at = datetime.now(tz=timezone.utc) + timedelta(days=REFRESH_TOKEN_DAYS)
         return raw, token_hash, expires_at
 
     @staticmethod
     def hash_refresh_token(raw: str) -> str:
-        """Hash a raw refresh token for DB lookup."""
         return hashlib.sha256(raw.encode()).hexdigest()
 
     # ── Route decorator ────────────────────────────────────────────────────────
@@ -106,8 +99,8 @@ class JWTUtil:
         Protect an endpoint with a short-lived access JWT.
         Expects:  Authorization: Bearer <access_token>
         Sets g.user_id and g.email for the route handler.
-        Returns 401 with {"error": ..., "code": "TOKEN_EXPIRED"} when expired
-        so the frontend knows to attempt a silent refresh.
+        Returns 401 with {"code": "TOKEN_EXPIRED"} when expired so the
+        frontend knows to attempt a silent refresh.
         """
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -125,4 +118,3 @@ class JWTUtil:
                 return jsonify({"error": f"Invalid token: {exc}", "code": "INVALID_TOKEN"}), 401
             return f(*args, **kwargs)
         return wrapper
-
