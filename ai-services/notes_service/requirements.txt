@@ -2,5 +2,6 @@ fastapi
 uvicorn
 python-dotenv
 sqlalchemy
-groq
+pymysql
 reportlab
+cryptography
