@@ -10,10 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
         document.documentElement.setAttribute('data-theme', 'dark');
-        if (toggleBtn) toggleBtn.textContent = '☀️ Light';
+        if (toggleBtn) toggleBtn.textContent = 'Light Mode';
     } else {
         document.documentElement.setAttribute('data-theme', 'light');
-        if (toggleBtn) toggleBtn.textContent = '🌙 Dark';
+        if (toggleBtn) toggleBtn.textContent = 'Dark Mode';
     }
 
     if (toggleBtn) {
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            toggleBtn.textContent = newTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+            toggleBtn.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
         });
     }
 
@@ -43,3 +43,4 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHeaderState(); // Init on load
     }
 });
+

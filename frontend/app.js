@@ -6,6 +6,7 @@ const totalSteps = 5;
 let selectedSubjectsData = {};
 let customSubjectsData = {};
 let currentCustomSubject = null;
+let chapterRatings = {}; // { 'SubjectName': { 'ChapterName': rating } }
 
 // ===================== INITIALIZATION =====================
 document.addEventListener('DOMContentLoaded', function () {
@@ -56,8 +57,8 @@ function changeStep(direction) {
 
     // Load subjects when reaching step 3
     if (currentStep === 3) loadSubjects();
-    // Load weak subjects when reaching step 5
-    if (currentStep === 5) loadWeakSubjects();
+    // Load chapter ratings when reaching step 5
+    if (currentStep === 5) loadChapterRatings();
 }
 
 function updateProgress() {
@@ -135,10 +136,10 @@ function updateDaysInfo() {
         const days = Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24));
         if (days > 0) {
             const weeks = Math.floor(days / 7);
-            daysText.textContent = `📅 Total study duration: ${days} days (${weeks} weeks, ${days % 7} days)`;
+            daysText.textContent = `Total study duration: ${days} days (${weeks} weeks, ${days % 7} days)`;
             daysInfo.style.display = 'block';
         } else {
-            daysText.textContent = '⚠️ End date must be after start date.';
+            daysText.textContent = 'End date must be after start date.';
             daysInfo.style.display = 'block';
         }
     } else {
@@ -426,7 +427,7 @@ function renderCustomChapters() {
         <span>${ch}</span>
         <button type="button" onclick="removeCustomChapter('${ch}')"
           style="padding:4px 10px; font-size:0.8em; border-radius:6px; width:auto; box-shadow:none; background:rgba(244,67,54,0.1); color:#f44336;">
-          ✕
+          X
         </button>
       </div>
     `;
@@ -458,25 +459,67 @@ function updateWeeklyHours() {
     }
 }
 
-// ===================== WEAK SUBJECTS =====================
-function loadWeakSubjects() {
-    const container = document.getElementById('weakSubjectsContainer');
+// ===================== CHAPTER RATINGS =====================
+const ratingLabels = ['', 'Not started', 'Basics only', 'Average', 'Good', 'Excellent'];
+
+function loadChapterRatings() {
+    const container = document.getElementById('chapterRatingsContainer');
     if (!container) return;
     container.innerHTML = '';
 
     const allSubjects = { ...selectedSubjectsData, ...customSubjectsData };
-    Object.keys(allSubjects).forEach(subject => {
-        const item = document.createElement('div');
-        item.className = 'checkbox-item';
-        item.innerHTML = `
-      <input type="checkbox" name="weakSubject" value="${subject}" id="weak_${subject.replace(/\s+/g, '_')}">
-      <label for="weak_${subject.replace(/\s+/g, '_')}">${subject}</label>
-    `;
-        container.appendChild(item);
-    });
 
     if (Object.keys(allSubjects).length === 0) {
-        container.innerHTML = '<p style="color:var(--text-light); font-style:italic;">No subjects selected yet.</p>';
+        container.innerHTML = '<p style="color:var(--text-light); font-style:italic;">No chapters selected yet. Go back and select chapters first.</p>';
+        return;
+    }
+
+    Object.keys(allSubjects).forEach(subject => {
+        const chapters = allSubjects[subject];
+        if (!chapters || chapters.length === 0) return;
+
+        // Initialize ratings for this subject if not exists
+        if (!chapterRatings[subject]) chapterRatings[subject] = {};
+
+        const group = document.createElement('div');
+        group.className = 'rating-subject-group';
+
+        let chaptersHTML = '';
+        chapters.forEach(ch => {
+            const currentRating = chapterRatings[subject][ch] || 0;
+            const safeId = `rate_${subject.replace(/[\s&'"]/g, '_')}_${ch.replace(/[\s&'"]/g, '_')}`;
+            let starsHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                starsHTML += `<span class="star ${i <= currentRating ? 'active' : ''}" data-value="${i}" onclick="setRating('${subject.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${ch.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${i}, this)">&#9733;</span>`;
+            }
+            chaptersHTML += `
+                <div class="rating-row">
+                    <span class="rating-chapter-name">${ch}</span>
+                    <div class="star-rating" id="${safeId}">${starsHTML}</div>
+                    <span class="rating-value-label" id="${safeId}_label">${currentRating > 0 ? ratingLabels[currentRating] : 'Not rated'}</span>
+                </div>
+            `;
+        });
+
+        group.innerHTML = `<h4>${subject}</h4>${chaptersHTML}`;
+        container.appendChild(group);
+    });
+}
+
+function setRating(subject, chapter, value, starEl) {
+    if (!chapterRatings[subject]) chapterRatings[subject] = {};
+    chapterRatings[subject][chapter] = value;
+
+    // Update stars visually
+    const parent = starEl.parentElement;
+    parent.querySelectorAll('.star').forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.value) <= value);
+    });
+
+    // Update label
+    const labelEl = parent.nextElementSibling;
+    if (labelEl && labelEl.classList.contains('rating-value-label')) {
+        labelEl.textContent = ratingLabels[value] || '';
     }
 }
 
@@ -486,14 +529,22 @@ function handleSubmit(e) {
 
     if (!validateCurrentStep()) return;
 
-    // Collect weak subjects
-    const weakSubjects = [];
-    document.querySelectorAll('input[name="weakSubject"]:checked').forEach(cb => {
-        weakSubjects.push(cb.value);
-    });
-
     // Combine all subjects
     const allSubjects = { ...selectedSubjectsData, ...customSubjectsData };
+
+    // Build ratings summary for display
+    let ratingSummaryHTML = '';
+    Object.keys(chapterRatings).forEach(subject => {
+        const chapters = chapterRatings[subject];
+        const ratedChapters = Object.entries(chapters).filter(([, v]) => v > 0);
+        if (ratedChapters.length > 0) {
+            ratingSummaryHTML += `<p style="margin-top:8px;"><strong>${subject}:</strong></p><ul style="margin:4px 0 0 20px;">`;
+            ratedChapters.forEach(([ch, rating]) => {
+                ratingSummaryHTML += `<li>${ch} - ${'&#9733;'.repeat(rating)} (${ratingLabels[rating]})</li>`;
+            });
+            ratingSummaryHTML += '</ul>';
+        }
+    });
 
     // Collect form data
     const formData = {
@@ -504,8 +555,7 @@ function handleSubmit(e) {
         subjects: allSubjects,
         weekdayHours: document.getElementById('weekdayHours').value,
         weekendHours: document.getElementById('weekendHours').value,
-        weakSubjects: weakSubjects,
-        focusAreas: document.getElementById('focusAreas').value,
+        chapterRatings: chapterRatings,
         emailReminders: document.getElementById('emailReminders').checked
     };
 
@@ -515,20 +565,20 @@ function handleSubmit(e) {
     const form = document.getElementById('studyPlannerForm');
     form.innerHTML = `
     <div style="text-align:center; padding:40px 20px;">
-      <div style="font-size:4em; margin-bottom:20px;">🎉</div>
+      <div style="font-size:4em; margin-bottom:20px;">Success!</div>
       <h2 style="color:var(--secondary-color); margin-bottom:15px;">Study Plan Submitted!</h2>
       <p style="color:var(--text-light); font-size:1.1em; margin-bottom:30px;">
-        Your personalized study plan is being generated. You'll receive it shortly.
+        Your personalized study plan is being generated based on your chapter ratings.
       </p>
       <div class="summary-item" style="text-align:left;">
-        <p><strong>📅 Duration:</strong> ${formData.startDate} to ${formData.endDate}</p>
-        <p><strong>📖 Exam:</strong> ${formData.exam}${formData.gateBranch ? ' (' + formData.gateBranch + ')' : ''}</p>
-        <p><strong>📚 Subjects:</strong> ${Object.keys(allSubjects).join(', ')}</p>
-        <p><strong>⏰ Study Hours:</strong> ${formData.weekdayHours}h weekdays, ${formData.weekendHours}h weekends</p>
-        ${weakSubjects.length ? '<p><strong>⚠️ Weak Subjects:</strong> ' + weakSubjects.join(', ') + '</p>' : ''}
+        <p><strong>Duration:</strong> ${formData.startDate} to ${formData.endDate}</p>
+        <p><strong>Exam:</strong> ${formData.exam}${formData.gateBranch ? ' (' + formData.gateBranch + ')' : ''}</p>
+        <p><strong>Subjects:</strong> ${Object.keys(allSubjects).join(', ')}</p>
+        <p><strong>Study Hours:</strong> ${formData.weekdayHours}h weekdays, ${formData.weekendHours}h weekends</p>
+        ${ratingSummaryHTML ? '<hr style="margin:15px 0; border:none; border-top:1px solid rgba(0,0,0,0.1);">' + '<p><strong>Chapter Ratings:</strong></p>' + ratingSummaryHTML : ''}
       </div>
       <button type="button" onclick="location.reload()" style="margin-top:30px;">
-        📝 Create Another Plan
+        Create Another Plan
       </button>
     </div>
   `;

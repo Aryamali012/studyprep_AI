@@ -6,10 +6,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paper Solver - StudyPrep AI</title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/auth.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Poppins', sans-serif;
+            padding-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input[type="file"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+        }
+
+        #output {
+            margin-top: 30px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .notes-result {
+            text-align: left;
+            background: rgba(0, 0, 0, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            color: var(--text-color);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        [data-theme="dark"] .notes-result {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.08);
         }
     </style>
 </head>
@@ -27,18 +84,31 @@
                     <a href="planner.html">Planner</a>
                     <a href="mock-test.html">Mock Test</a>
                     <a href="dashboard.html">Dashboard</a>
+                    <a href="login.html" class="nav-login-btn">Login</a>
                     <button id="theme-toggle" type="button"
-                        style="background:none; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor:pointer; margin-left:10px; transition: all 0.3s;">🌙
-                        Dark</button>
+                        style="background:none; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor:pointer; margin-left:10px; transition: all 0.3s;">Dark
+                        Mode</button>
                 </div>
             </nav>
         </div>
     </header>
 
-    <div class="container" style="text-align: center; padding: 100px 0;">
-        <h1 style="color: var(--secondary-color);">Question Paper Solver</h1>
-        <p>This feature is coming soon! You will be able to upload PDF question papers and get detailed solutions.</p>
-        <a href="home.html" class="btn" style="margin-top: 20px;">Back to Home</a>
+    <div class="container page-content">
+        <div class="box">
+            <h2 class="section-title">Question Paper Solver</h2>
+            <p style="text-align: center; margin-bottom: 30px; color: var(--text-light);">Upload a PDF question paper
+                and get
+                AI-generated detailed solutions.</p>
+
+            <div id="solver-form">
+                <div class="form-group">
+                    <input type="file" id="pdfInput" accept=".pdf" />
+                </div>
+                <button onclick="solvePaper()">Solve Question Paper</button>
+            </div>
+
+            <div id="output"></div>
+        </div>
     </div>
 
     <footer>
@@ -47,7 +117,8 @@
                 <div class="footer-section">
                     <h3>StudyPrep AI</h3>
                     <p>Empowering students with AI-driven tools for smarter, more efficient exam preparation. Plan,
-                        solve, and succeed.</p>
+                        solve, and
+                        succeed.</p>
                     <div class="social-links">
                         <a href="#">F</a>
                         <a href="#">T</a>
@@ -78,12 +149,85 @@
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2024 StudyPrep AI. All rights reserved. | Built with ❤️ for Students</p>
+                <p>&copy; 2024 StudyPrep AI. All rights reserved. | Built for Students</p>
             </div>
         </div>
     </footer>
 
+    <script src="assets/js/auth.js"></script>
+    <script>checkAuth();</script>
     <script src="assets/js/main.js"></script>
+    <script>
+        async function solvePaper() {
+            const outputDiv = document.getElementById("output");
+            const fileInput = document.getElementById("pdfInput");
+            const btn = document.querySelector("button[onclick='solvePaper()']");
+
+            if (!fileInput.files.length) {
+                outputDiv.innerHTML = '<div style="color: var(--accent-color); text-align: center; font-weight: 600; padding: 20px;">Please select a PDF file first.</div>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            if (!file.name.toLowerCase().endsWith(".pdf")) {
+                outputDiv.innerHTML = '<div style="color: var(--accent-color); text-align: center; font-weight: 600; padding: 20px;">Please select a PDF file.</div>';
+                return;
+            }
+
+            outputDiv.innerHTML = '<div style="text-align:center; color: var(--primary-color);">Solving your paper... please wait. This may take a minute.</div>';
+            btn.disabled = true;
+            btn.textContent = "Solving...";
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await fetch("http://127.0.0.1:8001/solve-pdf", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!res.ok) {
+                    let errorMsg = "Failed to solve the paper.";
+                    try {
+                        const errData = await res.json();
+                        errorMsg = errData.detail || errorMsg;
+                    } catch { }
+                    throw new Error(errorMsg);
+                }
+
+                // The response is a PDF file — create download link
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+
+                // Extract filename from headers or use default
+                const contentDisposition = res.headers.get("content-disposition");
+                let filename = "answers.pdf";
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename=(.+)/);
+                    if (match) filename = match[1].replace(/"/g, "");
+                }
+
+                outputDiv.innerHTML = `
+          <h3>Solutions Ready!</h3>
+          <div class="notes-result">
+            <p>Your solved question paper is ready to download.</p>
+            <p style="margin-top: 15px;">
+              <a href="${url}" download="${filename}" 
+                 style="color: var(--primary-color); font-weight: 700; text-decoration: underline; font-size: 1.1rem;">
+                 Download Answers PDF
+              </a>
+            </p>
+          </div>`;
+            } catch (error) {
+                console.error(error);
+                outputDiv.innerHTML = `<div style="color: var(--accent-color); text-align: center; font-weight: 600; padding: 20px;">${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Solve Question Paper";
+            }
+        }
+    </script>
 </body>
 
 </html>

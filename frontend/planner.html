@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Study Planner - StudyPrep AI</title>
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/auth.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -69,6 +70,96 @@
       line-height: 1.6;
       color: var(--text-color);
     }
+
+    /* Star Rating */
+    .rating-subject-group {
+      margin-bottom: 20px;
+      border: 2px solid rgba(0, 0, 0, 0.06);
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color 0.3s;
+    }
+
+    [data-theme="dark"] .rating-subject-group {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .rating-subject-group h4 {
+      margin: 0 0 12px 0;
+      color: var(--primary-color);
+      font-size: 1em;
+      font-weight: 600;
+    }
+
+    .rating-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      gap: 10px;
+    }
+
+    [data-theme="dark"] .rating-row {
+      border-bottom-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .rating-row:last-child {
+      border-bottom: none;
+    }
+
+    .rating-chapter-name {
+      font-size: 0.88em;
+      color: var(--text-color);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .star-rating {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .star-rating .star {
+      font-size: 1.4em;
+      cursor: pointer;
+      color: #ccc;
+      transition: color 0.15s, transform 0.15s;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .star-rating .star:hover,
+    .star-rating .star.active {
+      color: #ffc107;
+      transform: scale(1.15);
+    }
+
+    .star-rating .star.active {
+      transform: scale(1);
+    }
+
+    [data-theme="dark"] .star-rating .star {
+      color: #555;
+    }
+
+    [data-theme="dark"] .star-rating .star:hover,
+    [data-theme="dark"] .star-rating .star.active {
+      color: #ffc107;
+    }
+
+    [data-theme="dark"] .rating-legend {
+      background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .rating-value-label {
+      font-size: 0.75em;
+      min-width: 70px;
+      text-align: right;
+      color: var(--text-light);
+      font-weight: 500;
+    }
   </style>
 </head>
 
@@ -85,9 +176,10 @@
           <a href="planner.html" class="active">Planner</a>
           <a href="mock-test.html">Mock Test</a>
           <a href="dashboard.html">Dashboard</a>
+          <a href="login.html" class="nav-login-btn">Login</a>
           <button id="theme-toggle" type="button"
-            style="background:none; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor:pointer; margin-left:10px; transition: all 0.3s;">🌙
-            Dark</button>
+            style="background:none; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor:pointer; margin-left:10px; transition: all 0.3s;">Dark
+            Mode</button>
         </div>
       </nav>
     </div>
@@ -114,7 +206,7 @@
 
         <!-- Step 1: Dates -->
         <div class="step active" data-step="1">
-          <h3>📅 Study Duration</h3>
+          <h3>Study Duration</h3>
 
           <label for="startDate">Start Date</label>
           <input type="date" id="startDate" name="startDate" required>
@@ -130,7 +222,7 @@
 
         <!-- Step 2: Exam Selection -->
         <div class="step" data-step="2">
-          <h3>📖 Select Your Exam</h3>
+          <h3>Select Your Exam</h3>
 
           <label for="exam">Which exam are you preparing for?</label>
           <select id="exam" name="exam" required>
@@ -162,22 +254,22 @@
 
           <div id="examInfo"
             style="display:none; margin:5px 0 0; text-align:left; padding:4px 0; color:var(--primary-color); font-weight:600; font-size:0.85em;">
-            <p style="margin:0;">✓ Selected: <span id="selectedExam"></span></p>
+            <p style="margin:0;">Selected: <span id="selectedExam"></span></p>
           </div>
         </div>
 
         <!-- Step 3: Subjects and Chapters Selection -->
         <div class="step" data-step="3">
-          <h3>📚 Select Subjects & Chapters</h3>
+          <h3>Select Subjects & Chapters</h3>
 
-          <input type="text" id="searchSubjects" placeholder="🔍 Search subjects or chapters..."
+          <input type="text" id="searchSubjects" placeholder="Search subjects or chapters..."
             style="margin-bottom: 20px;">
 
           <div id="subjectsContainer"></div>
 
           <!-- Custom Subject/Chapter Addition -->
           <div class="subject-chapters" style="border-left-color: #ff9800;">
-            <h3 style="color: #f57c00; border: none; padding: 0;">➕ Add Custom Subject</h3>
+            <h3 style="color: #f57c00; border: none; padding: 0;">+ Add Custom Subject</h3>
 
             <div class="add-custom">
               <input type="text" id="customSubjectName" placeholder="Enter subject name (e.g., Psychology)">
@@ -187,7 +279,7 @@
             <div id="customSubjectsList"></div>
 
             <div id="customChapterSection" style="display: none; margin-top: 20px;">
-              <h3 style="color: var(--primary-color); border: none; padding: 0;">➕ Add Chapters to: <span
+              <h3 style="color: var(--primary-color); border: none; padding: 0;">+ Add Chapters to: <span
                   id="customChapterSubjectName"></span></h3>
               <div class="add-custom">
                 <input type="text" id="customChapterName" placeholder="Enter chapter name">
@@ -201,13 +293,13 @@
 
           <div id="selectionSummary"
             style="display:none; margin:5px 0 0; text-align:left; padding:4px 0; color:var(--primary-color); font-weight:600; font-size:0.85em;">
-            <p style="margin:0;">✓ Selected: <span id="summaryText"></span></p>
+            <p style="margin:0;">Selected: <span id="summaryText"></span></p>
           </div>
         </div>
 
         <!-- Step 4: Study Hours -->
         <div class="step" data-step="4">
-          <h3>⏰ Daily Study Hours</h3>
+          <h3>Daily Study Hours</h3>
 
           <label for="weekdayHours">Weekday Study Hours (Monday - Friday)</label>
           <input type="number" id="weekdayHours" name="weekdayHours" min="1" max="24" placeholder="e.g., 4" required>
@@ -221,32 +313,31 @@
 
           <div id="weeklyHoursInfo"
             style="display:none; margin:5px 0 0; text-align:left; padding:4px 0; color:var(--primary-color); font-weight:600; font-size:0.85em;">
-            <p style="margin:0;">📊 Weekly Study Hours: <span id="weeklyHours"></span> hours</p>
+            <p style="margin:0;">Weekly Study Hours: <span id="weeklyHours"></span> hours</p>
           </div>
         </div>
 
-        <!-- Step 5: Personalized Information -->
+        <!-- Step 5: Rate Your Chapters -->
         <div class="step" data-step="5">
-          <h3>🎯 Personalized Information</h3>
+          <h3>Rate Your Chapters</h3>
+          <p style="color: var(--text-light); font-size: 0.9em; margin-bottom: 20px;">
+            Rate your proficiency in each chapter you selected. This helps us prioritize your study plan.
+          </p>
 
-          <label>Weak Subjects (Select all that apply)</label>
-          <div id="weakSubjectsContainer"></div>
+          <div class="rating-legend"
+            style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; padding:12px 16px; background:rgba(0,0,0,0.03); border-radius:10px; font-size:0.82em; color:var(--text-light);">
+            <span><strong style="color:#f44336;">1</strong> - Not started</span>
+            <span><strong style="color:#ff9800;">2</strong> - Basics only</span>
+            <span><strong style="color:#ffc107;">3</strong> - Average</span>
+            <span><strong style="color:#8bc34a;">4</strong> - Good</span>
+            <span><strong style="color:#4caf50;">5</strong> - Excellent</span>
+          </div>
 
-          <label for="focusAreas">Focus Areas / Additional Remarks</label>
-          <textarea id="focusAreas" name="focusAreas"
-            style="width:100%; padding:12px; border:2px solid #eee; border-radius:10px; font-family:inherit; font-size:1em; min-height:100px; box-sizing:border-box; resize:vertical;"
-            placeholder="e.g., Need more practice in numerical problems, Focus on previous year questions, Improve speed in problem-solving"></textarea>
-          <p style="font-size: 0.85em; color: var(--text-light); margin-top: 5px;">Any specific areas where you need to
-            focus more?</p>
+          <div id="chapterRatingsContainer"></div>
 
           <div class="checkbox-item" style="margin-top: 20px;">
             <input type="checkbox" id="emailReminders" name="emailReminders" checked>
             <label for="emailReminders">Enable daily email reminders with study plan and practice quiz</label>
-          </div>
-
-          <div class="loading" style="margin-top: 20px;">
-            <p>📧 You will receive daily emails with your study schedule and personalized practice questions based on
-              chapters you've learned.</p>
           </div>
         </div>
 
@@ -259,7 +350,7 @@
             Next →
           </button>
           <button type="submit" id="submitBtn" style="display: none;">
-            🚀 Generate Study Plan
+            Generate Study Plan
           </button>
         </div>
       </form>
@@ -303,11 +394,13 @@
       </div>
 
       <div class="footer-bottom">
-        <p>&copy; 2024 StudyPrep AI. All rights reserved. | Built with ❤️ for Students</p>
+        <p>&copy; 2024 StudyPrep AI. All rights reserved. | Built for Students</p>
       </div>
     </div>
   </footer>
 
+  <script src="assets/js/auth.js"></script>
+  <script>checkAuth();</script>
   <script src="assets/js/main.js"></script>
 
   <!-- Include the subjects database -->
