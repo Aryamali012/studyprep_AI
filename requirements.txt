@@ -1,5 +1,11 @@
+# Existing deps (unchanged)
 fastapi
 uvicorn[standard]
 groq
 python-dotenv
 pydantic
+
+# New deps for MySQL + ORM
+sqlalchemy
+pymysql
+cryptography
