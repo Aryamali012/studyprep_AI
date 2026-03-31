@@ -23,7 +23,22 @@ from reportlab.lib.enums import TA_LEFT
 from reportlab.platypus import Paragraph, Spacer, SimpleDocTemplate, KeepTogether
 from reportlab.lib.units import inch
 
+from fastapi.middleware.cors import CORSMiddleware
+
+from dotenv import load_dotenv
+
 app = FastAPI(title="Question Paper Solver (Groq)")
+
+# CORS – allow frontend to call this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+load_dotenv()
 
 # --- GROQ client init (expects env var GROQ_API_KEY) ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -64,7 +79,7 @@ def ask_groq_batch_and_parse(questions: List[str], model: str = "llama-3.3-70b-v
         completion = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
+            temperature=0.7,
             max_tokens=2000
         )
         resp_text = completion.choices[0].message.content
