@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notes Generator - StudyPrep AI</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/auth.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      padding-top: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    input:focus {
+      border-color: var(--primary-color);
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: var(--secondary-color);
+    }
+
+    #output {
+      margin-top: 30px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: var(--text-color);
+    }
+
+    .notes-result {
+      text-align: left;
+      background: rgba(0, 0, 0, 0.03);
+      padding: 20px;
+      border-radius: 10px;
+      color: var(--text-color);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    [data-theme="dark"] .notes-result {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ── Notes History Panel ────────────────────────────────── */
+    .history-panel {
+      margin-top: 40px;
+    }
+
+    .history-panel h3 {
+      margin-bottom: 16px;
+      color: var(--primary-color);
+      font-size: 1.2em;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .history-item:hover {
+      background: rgba(0, 0, 0, 0.06);
+      transform: translateX(4px);
+    }
+
+    [data-theme="dark"] .history-item {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    [data-theme="dark"] .history-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .history-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .history-item-topic {
+      font-weight: 600;
+      font-size: 1em;
+      color: var(--text-color);
+    }
+
+    .history-item-date {
+      font-size: 0.82em;
+      color: var(--text-light);
+    }
+
+    .history-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .history-btn {
+      width: auto;
+      padding: 6px 14px;
+      font-size: 0.82em;
+      border-radius: 6px;
+    }
+
+    .history-btn.view-btn {
+      background: var(--primary-color);
+    }
+
+    .history-btn.delete-btn {
+      background: rgba(244, 67, 54, 0.12);
+      color: #f44336;
+    }
+
+    .history-btn.delete-btn:hover {
+      background: #f44336;
+      color: #fff;
+    }
+
+    .history-empty {
+      text-align: center;
+      color: var(--text-light);
+      padding: 30px;
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="container">
+      <nav>
+        <a href="home.html" class="logo">StudyPrep AI</a>
+        <div class="nav-links">
+          <a href="home.html">Home</a>
+          <a href="notes.html" class="active">Notes</a>
+          <a href="solver.html">Solver</a>
+          <a href="planner.html">Planner</a>
+          <a href="mock-test.html">Mock Test</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="login.html" class="nav-login-btn">Login</a>
+          <button id="theme-toggle" type="button"
+            style="background:none; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor:pointer; margin-left:10px; transition: all 0.3s;">Dark
+            Mode</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container page-content">
+    <div class="box">
+      <h2 class="section-title">AI Notes Generator</h2>
+      <p style="text-align: center; margin-bottom: 30px; color: var(--text-light);">Enter a topic and let AI generate
+        structured
+        notes for you.</p>
+
+      <div id="notes-form">
+        <div class="form-group">
+          <input id="topic" placeholder="Enter topic (e.g., Photosynthesis, Newton's Laws...)"
+            onkeypress="if(event.key === 'Enter') generateNotes()" />
+        </div>
+        <button onclick="generateNotes()">Generate Notes</button>
+      </div>
+
+      <div id="output"></div>
+
+      <!-- ── Notes History ──────────────────────────────────── -->
+      <div class="history-panel" id="historyPanel">
+        <h3>My Past Notes</h3>
+        <div class="history-list" id="historyList">
+          <div class="history-empty">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>StudyPrep AI</h3>
+          <p>Empowering students with AI-driven tools for smarter, more efficient exam preparation. Plan, solve, and
+            succeed.</p>
+          <div class="social-links">
+            <a href="#">F</a>
+            <a href="#">T</a>
+            <a href="#">I</a>
+            <a href="#">L</a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h3>Quick Links</h3>
+          <ul class="footer-links">
+            <li><a href="home.html">Home</a></li>
+            <li><a href="notes.html">Notes Generator</a></li>
+            <li><a href="planner.html">Study Planner</a></li>
+            <li><a href="solver.html">Paper Solver</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3>Support</h3>
+          <ul class="footer-links">
+            <li><a href="#">Help Center</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2024 StudyPrep AI. All rights reserved. | Built for Students</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/auth.js"></script>
+  <script>checkAuth();</script>
+  <script src="assets/js/main.js"></script>
+  <script>
+    const NOTES_API = "http://127.0.0.1:8000/notes";
+
+    // ── Get user_id from localStorage (set by auth.js on login) ──
+    function getUserId() {
+      return localStorage.getItem("userId") || "";
+    }
+
+    // ── Generate Notes ─────────────────────────────────────────────
+    async function generateNotes() {
+      const outputDiv = document.getElementById("output");
+      const topic = document.getElementById("topic").value.trim();
+      const btn = document.querySelector("button[onclick='generateNotes()']");
+      const userId = getUserId();
+
+      if (!topic) {
+        outputDiv.innerHTML = '<div style="color: var(--accent-color); text-align: center; font-weight: 600; padding: 20px;">Please enter a topic.</div>';
+        return;
+      }
+
+      if (!userId) {
+        outputDiv.innerHTML = '<div style="color: var(--accent-color); text-align: center; font-weight: 600; padding: 20px;">Please log in to generate and save notes.</div>';
+        return;
+      }
+
+      outputDiv.innerHTML = '<div style="text-align:center; color: var(--primary-color);">Generating notes... please wait...</div>';
+      btn.disabled = true;
+      btn.textContent = "Generating...";
+
+      try {
+        const res = await fetch(`${NOTES_API}/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic, user_id: userId })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.detail || "Failed to fetch notes");
+        }
+
+        const data = await res.json();
+        console.log("API Response:", data);
+
+        let notesContent = data.notes || data.content || "";
+        notesContent = notesContent.replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+        outputDiv.innerHTML = `<h3>Generated Notes for: ${topic}</h3><div class="notes-result">${notesContent}</div>`;
+
+        // Refresh the history list
+        loadHistory();
+      } catch (error) {
+        console.error(error);
+        outputDiv.innerHTML = `<div style="color: var(--accent-color); text-align: center; font-weight: 600; padding: 20px;">${error.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate Notes";
+      }
+    }
+
+    // ── Load Notes History ─────────────────────────────────────────
+    async function loadHistory() {
+      const listDiv = document.getElementById("historyList");
+      const userId = getUserId();
+
+      if (!userId) {
+        listDiv.innerHTML = '<div class="history-empty">Log in to see your saved notes.</div>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${NOTES_API}/history?user_id=${userId}`);
+        const notes = await res.json();
+
+        if (!notes || notes.length === 0) {
+          listDiv.innerHTML = '<div class="history-empty">No notes yet. Generate your first notes above!</div>';
+          return;
+        }
+
+        listDiv.innerHTML = notes.map(n => `
+          <div class="history-item" onclick="viewNote(${n.id})">
+            <div class="history-item-info">
+              <span class="history-item-topic">${n.topic}</span>
+              <span class="history-item-date">${n.created_at}</span>
+            </div>
+            <div class="history-item-actions">
+              <button class="history-btn view-btn" onclick="event.stopPropagation(); viewNote(${n.id})">View</button>
+              <button class="history-btn delete-btn" onclick="event.stopPropagation(); deleteNote(${n.id})">Delete</button>
+            </div>
+          </div>
+        `).join("");
+      } catch (err) {
+        console.error("Failed to load history:", err);
+        listDiv.innerHTML = '<div class="history-empty">Could not load history.</div>';
+      }
+    }
+
+    // ── View a Single Note ────────────────────────────────────────
+    async function viewNote(noteId) {
+      const outputDiv = document.getElementById("output");
+      outputDiv.innerHTML = '<div style="text-align:center; color: var(--primary-color);">Loading note...</div>';
+
+      try {
+        const res = await fetch(`${NOTES_API}/${noteId}`);
+        const note = await res.json();
+
+        let content = note.content || "";
+        content = content.replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+        outputDiv.innerHTML = `
+          <h3>${note.topic}</h3>
+          <p style="color: var(--text-light); font-size: 0.85em; margin-bottom: 15px;">Generated on ${note.created_at}</p>
+          <div class="notes-result">${content}</div>
+        `;
+
+        // Scroll to the output
+        outputDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        console.error(err);
+        outputDiv.innerHTML = '<div style="color: var(--accent-color); text-align: center; font-weight: 600; padding: 20px;">Failed to load note.</div>';
+      }
+    }
+
+    // ── Delete a Note ─────────────────────────────────────────────
+    async function deleteNote(noteId) {
+      if (!confirm("Are you sure you want to delete this note?")) return;
+
+      try {
+        await fetch(`${NOTES_API}/${noteId}`, { method: "DELETE" });
+        loadHistory();
+
+        // Clear output if the deleted note was being viewed
+        const outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = "";
+      } catch (err) {
+        console.error("Failed to delete note:", err);
+        alert("Could not delete note.");
+      }
+    }
+
+    // ── Load history on page load ─────────────────────────────────
+    document.addEventListener("DOMContentLoaded", loadHistory);
+  </script>
+</body>
+
+</html>
