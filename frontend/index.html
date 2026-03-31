@@ -1,0 +1,23 @@
+<form onsubmit="generateNotes(event)">
+  <input id="topic" />
+  <button type="submit">Generate</button>
+</form>
+
+<div id="output"></div>
+
+<script>
+async function generateNotes(e) {
+  e.preventDefault();
+
+  const topic = document.getElementById("topic").value;
+
+  const res = await fetch("http://127.0.0.1:8000/notes/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ topic })
+  });
+
+  const data = await res.json();
+  document.getElementById("output").innerText = data.notes;
+}
+</script>
